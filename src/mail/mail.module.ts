@@ -20,7 +20,7 @@ import { MailProcessor } from './processors/mail.processor';
           user: appConfig().mail.user,
           pass: appConfig().mail.password,
         },
-      },
+      },                           
       defaults: {
         from: appConfig().mail.from,
       },

@@ -54,6 +54,9 @@ export class UserService {
 
       if (type) {
         where_condition['type'] = type;
+      }else {
+        // Restrict the type to only 'inspector' and 'user' if no specific type is provided
+        where_condition['type'] = { in: ['inspector', 'user'] };
       }
 
       if (approved) {

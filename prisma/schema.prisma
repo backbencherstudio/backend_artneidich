@@ -75,6 +75,7 @@ model User {
   sender_messages           Message[]      @relation("sender")
   receiver_notifications    Notification[] @relation("receiver")
   sender_notifications      Notification[] @relation("sender")
+  jobs                      Jobs[]
 
   user_payment_methods UserPaymentMethod[]
   user_settings        UserSetting[]
@@ -434,3 +435,24 @@ model UserSetting {
 //   tenant    Organization? @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
 //   @@map("posts")
 // }
+
+model Jobs{
+  id             String    @id @default(cuid())
+  inspector_id   String
+  inspector_name String
+  address        String
+  fha_number     String
+  created_at     DateTime  @default(now())
+  completed_at   DateTime?
+  status         String
+  standard_fee   String?
+  rush_fee       String?
+  occupied_fee   String?
+  long_range_fee String?
+  notes          String?
+
+  inspector      User      @relation(fields: [inspector_id], references: [id])
+  
+  
+  @@map("jobs")
+}
