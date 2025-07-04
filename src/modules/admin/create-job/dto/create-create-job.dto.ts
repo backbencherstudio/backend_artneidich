@@ -1,4 +1,4 @@
-import { IsObject, IsOptional, IsString } from "class-validator";
+import { IsDate, IsObject, IsOptional, IsString } from "class-validator";
 
 import { IsNotEmpty } from "class-validator";
 
@@ -36,4 +36,8 @@ export class CreateCreateJobDto {
         occupied_fee?: number;
         long_range_fee?: number;
     }
+
+    @IsDate()
+    @IsNotEmpty()
+    due_date: Date;
 }

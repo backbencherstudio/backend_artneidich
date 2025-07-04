@@ -450,6 +450,8 @@ model Jobs{
   occupied_fee   String?
   long_range_fee String?
   notes          String?
+  working_status String?   @default("pending")
+  due_date       DateTime?
 
   inspector      User      @relation(fields: [inspector_id], references: [id])
   
