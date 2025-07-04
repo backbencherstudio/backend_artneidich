@@ -28,6 +28,10 @@ export class CreateJobController {
   @Post()
   async create(@Body() createCreateJobDto: CreateCreateJobDto) {
     try{
+      // console.log(createCreateJobDto)
+      if (typeof createCreateJobDto.due_date === 'string') {
+        createCreateJobDto.due_date = new Date(createCreateJobDto.due_date);
+      }
       return this.createJobService.create(createCreateJobDto);
     } catch (error) {
       return {

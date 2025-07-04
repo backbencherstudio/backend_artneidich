@@ -37,7 +37,7 @@ export class CreateCreateJobDto {
         long_range_fee?: number;
     }
 
-    @IsDate()
+    @IsString()
     @IsNotEmpty()
     due_date: Date;
 }

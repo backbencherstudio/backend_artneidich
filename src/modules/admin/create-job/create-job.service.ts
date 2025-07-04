@@ -19,6 +19,7 @@ export class CreateJobService {
         rush_fee: String(createCreateJobDto.fee_types.rush_fee),
         occupied_fee: String(createCreateJobDto.fee_types.occupied_fee),
         long_range_fee: String(createCreateJobDto.fee_types.long_range_fee),
+        due_date: createCreateJobDto.due_date,
         // Add other fields as needed
       },
     });
