@@ -23,6 +23,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import appConfig from '../../config/app.config';
 import { AuthGuard } from '@nestjs/passport';
+import { join } from 'path';
 
 @ApiTags('auth')
 @Controller('auth')
