@@ -55,6 +55,23 @@ export class MailProcessor extends WorkerHost {
             context: job.data.context,
           });
           break;
+        case 'sendInspectionPDF':
+          this.logger.log('Sending inspection PDF');
+          // console.log("job.data.to", job.data.to);
+          // console.log("job.data.from", job.data.from);
+          // console.log("job.data.subject", job.data.subject);
+          // console.log("job.data.template", job.data.template);
+          // console.log("job.data.context", job.data.context);
+          // console.log("job.data.attachments", job.data.attachments);
+          await this.mailerService.sendMail({
+            to: job.data.to,
+            from: job.data.from,
+            subject: job.data.subject,
+            template: job.data.template,
+            context: job.data.context,
+            attachments: job.data.attachments,
+          });
+          break;
         default:
           this.logger.log('Unknown job name');
           return;

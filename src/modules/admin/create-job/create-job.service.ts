@@ -12,6 +12,7 @@ export class CreateJobService {
       data: {
         inspector_id: createCreateJobDto.userID,
         inspector_name: createCreateJobDto.inspector_name,
+        inspection_type: createCreateJobDto.inspection_type,
         address: createCreateJobDto.address,
         fha_number: createCreateJobDto.fha_number,
         status: createCreateJobDto.status,
@@ -20,6 +21,7 @@ export class CreateJobService {
         occupied_fee: String(createCreateJobDto.fee_types.occupied_fee),
         long_range_fee: String(createCreateJobDto.fee_types.long_range_fee),
         due_date: createCreateJobDto.due_date,
+
         // Add other fields as needed
       },
     });

@@ -14,7 +14,7 @@ export class CreateCreateJobDto {
 
     @IsString()
     @IsNotEmpty()
-    inspectorType: string;
+    inspection_type: string;
 
     @IsOptional()
     @IsNotEmpty()

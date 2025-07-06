@@ -1,12 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import PDFDocument = require('pdfkit');
 import { PrismaService } from 'src/prisma/prisma.service';
+import { MailService } from 'src/mail/mail.service';
 import * as fs from 'fs';
 import * as path from 'path';
 
 @Injectable()
 export class JobListService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mailService: MailService,
+  ) {}
 
   async uploadMultipleJobImages(
     jobId: string,
@@ -55,7 +59,7 @@ export class JobListService {
       doc.moveDown();
       doc.font('Helvetica-Bold').fontSize(10).text(`Date of Inspection : ${new Date().toLocaleDateString()}`, { align: 'left' });
       doc.y += 2;
-      doc.font('Helvetica-Bold').fontSize(10).text(`Subject Property : ${jobData.address}`, { align: 'left' });
+      doc.font('Helvetica-Bold').fontSize(10).text(`Type of Inspection : ${jobData.inspection_type}`, { align: 'left' });
       doc.y += 2;
       doc.font('Helvetica-Bold').fontSize(10).text(`Subject Property : ${jobData.address}`, { align: 'left' });
       doc.y += 10;
@@ -169,6 +173,24 @@ export class JobListService {
     // Finalize the PDF
     doc.end();
 
+    // 3. Save the PDF name to the database
+    await this.prisma.jobs.update({
+      where: { id: jobId },
+      data: { pdf_data: pdfPath },
+    });
+
+    // 4. Send the PDF to the admin through email
+    await this.mailService.sendInspectionPDF({
+      email: process.env.MAIL_USERNAME, // Replace with actual admin email
+      jobId: jobId,
+      jobData: jobData,
+    });
+    
+    // 5. Update the job status to completed
+    await this.prisma.jobs.update({
+      where: { id: jobId },
+      data: { working_status: 'completed' },
+    });
     return { success: true, message: 'Job Inspection PDF created successfully.', pdfPath };
   }
 }

@@ -440,6 +440,7 @@ model Jobs{
   id             String    @id @default(cuid())
   inspector_id   String
   inspector_name String
+  inspection_type String
   address        String
   fha_number     String
   created_at     DateTime  @default(now())
@@ -452,6 +453,7 @@ model Jobs{
   notes          String?
   working_status String?   @default("pending")
   due_date       DateTime?
+  pdf_data       String?
 
   inspector      User      @relation(fields: [inspector_id], references: [id])
   

@@ -209,7 +209,7 @@ export class UserRepository {
     type?: string;
   }) {
     try {
-      console.log(name, first_name, last_name, email, password, phone_number, role_id, type);
+      // console.log(name, first_name, last_name, email, password, phone_number, role_id, type);
       const data = {};
       if (name) {
         data['name'] = name;

@@ -78,4 +78,45 @@ export class MailService {
       console.log(error);
     }
   }
+
+  async sendInspectionPDF(params: {
+    email: string;
+    jobId: string;
+    jobData: any;
+  }) {
+    try {
+      const from = `${process.env.APP_NAME} <${appConfig().mail.from}>`;
+      const subject = `Inspection Report - FHA #${params.jobData.fha_number}`;
+      
+      // console.log("from", from);
+      // add to queue
+      await this.queue.add('sendInspectionPDF', {
+        to: params.email,
+        from: from,
+        subject: subject,
+        template: 'inspection-report',
+        context: {
+          jobData: params.jobData,
+          jobId: params.jobId,
+        },
+        attachments: [
+          {
+            filename: `${params.jobId}.pdf`,
+            path: `${process.env.BACKEND_URL}/public/storage/inspection-pdf/${params.jobId}.pdf`,
+          },
+        ],
+      },{
+        removeOnComplete:{ age: 10 * 60 * 1000},
+        attempts: 2,
+        backoff:{
+          type: 'exponential',
+          delay: 5000,
+        },
+        removeOnFail:{ age: 10 * 60 * 1000},
+      }
+    );
+    } catch (error) {
+      console.log(error);
+    }
+  }
 }
