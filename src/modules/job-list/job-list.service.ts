@@ -191,6 +191,6 @@ export class JobListService {
       where: { id: jobId },
       data: { working_status: 'completed' },
     });
-    return { success: true, message: 'Job Inspection PDF created successfully.', pdfPath };
+    return { success: true, message: 'Inspection Report has been sent to the admin.'};
   }
 }
