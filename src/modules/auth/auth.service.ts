@@ -222,7 +222,36 @@ export class AuthService {
     try {
       const payload = { email: email, sub: userId };
       const token = this.jwtService.sign(payload);
-      const user = await UserRepository.getUserDetails(userId);
+      const user = await this.prisma.user.findFirst({
+        where: {
+          id: userId,
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          avatar: true,
+          address: true,
+          phone_number: true,
+          type: true,
+          gender: true,
+          date_of_birth: true,
+          created_at: true,
+        },
+      });
+
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found',
+        };
+      }
+
+      if (user.avatar) {
+        user['avatar_url'] = SojebStorage.url(
+          appConfig().storageUrl.avatar + user.avatar,
+        );
+      }
 
       return {
         success: true,
@@ -231,7 +260,7 @@ export class AuthService {
           token: token,
           type: 'bearer',
         },
-        type: user.type,
+        data: user,
       };
     } catch (error) {
       return {

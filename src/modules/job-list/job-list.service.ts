@@ -4,7 +4,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { MailService } from 'src/mail/mail.service';
 import * as fs from 'fs';
 import * as path from 'path';
-
+10
 @Injectable()
 export class JobListService {
   constructor(
