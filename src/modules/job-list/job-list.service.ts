@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import PDFDocument = require('pdfkit');
 import { PrismaService } from 'src/prisma/prisma.service';
 import { MailService } from 'src/mail/mail.service';
@@ -17,13 +17,17 @@ export class JobListService {
     userId: string,
     imageData: Array<{ title: string; description?: string }>,
     images: Express.Multer.File[],
+    statusType: 'draft' | 'completed'
   ) {
     // 1. Validate image data
     if (images.length !== imageData.length) {
-      return {
-        success: false,
-        message: 'Number of images does not match number of imageData entries',
-      };
+      throw new HttpException(
+        {
+          success: false,
+          message: 'Number of images does not match number of imageData entries',
+        },
+        HttpStatus.BAD_REQUEST, // Status code 400 (Bad Request)
+      );
     }
 
     const jobData = await this.prisma.jobs.findUnique({
@@ -179,18 +183,112 @@ export class JobListService {
       data: { pdf_data: pdfPath },
     });
 
+    // Save each image's info in the JobImage table
+    for (let i = 0; i < images.length; i++) {
+      await this.prisma.jobImage.create({
+        data: {
+          job_id: jobId,
+          file_path: images[i].path, // or images[i].filename if you want just the filename
+          title: imageData[i].title,
+          description: imageData[i].description || null,
+        },
+      });
+    }
+
     // 4. Send the PDF to the admin through email
-    await this.mailService.sendInspectionPDF({
-      email: process.env.MAIL_USERNAME, // Replace with actual admin email
-      jobId: jobId,
-      jobData: jobData,
-    });
+    if (statusType === 'completed') {
+      await this.mailService.sendInspectionPDF({
+        email: process.env.MAIL_USERNAME,
+        jobId: jobId,
+        jobData: jobData,
+      });
+    }
     
     // 5. Update the job status to completed
     await this.prisma.jobs.update({
       where: { id: jobId },
-      data: { working_status: 'completed' },
+      data: { working_status: statusType },
     });
-    return { success: true, message: 'Inspection Report has been sent to the admin.'};
+    return { status:201, success: true, message:
+      statusType === 'completed'
+        ? 'Inspection Report has been sent to the admin.'
+        : 'Draft saved successfully.',
+    };
+  }
+
+  async getDraftJobs(userId) {
+    try {
+      const response = await this.prisma.jobs.findMany({
+        where: { working_status: 'draft', inspector_id: userId },
+        orderBy: { created_at: 'desc' },
+        include: {
+          images: true,  // Include the related images
+        },
+      });
+      return{
+        status: 200,
+        success: true,
+        message: 'Fetch all Reports',
+        data: response
+      }
+    } catch (error) {
+      throw new HttpException('Internal Server Error', HttpStatus.INTERNAL_SERVER_ERROR)
+    }
+  }
+  
+  async getDraftJobsById(userId,Id) {
+    try {
+      const response = await this.prisma.jobs.findFirst({
+        where: { working_status: 'draft', id: Id, inspector_id: userId },
+        include: {
+          images: true,  // Include the related images
+        },
+      });
+      return{
+        status: 200,
+        success: true,
+        message: 'Fetch Report Successfully',
+        data: response
+      }
+    } catch (error) {
+      throw new HttpException('Internal Server Error', HttpStatus.INTERNAL_SERVER_ERROR)
+    }
+  }
+
+  async deleteImage(imageId: string) {
+    try {
+      // Find the image by ID first to check if it exists
+      const image = await this.prisma.jobImage.findUnique({
+        where: { id: imageId },
+      });
+
+      if (!image) {
+        throw new HttpException('Image not found', HttpStatus.NOT_FOUND);
+      }
+
+      const filePath = path.resolve(process.cwd(), 'public', image.file_path.replace(/^public[\\/]/, ''));
+
+      // Debugging: Log the file path to ensure it's correct
+  
+      // Check if the file exists before attempting to delete it
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath); // Delete the file from the filesystem
+      } else {
+        console.log('File not found at the given path');
+      }
+
+      // Now delete the image from the database
+      await this.prisma.jobImage.delete({
+        where: { id: imageId },
+      });
+
+      return {
+        status: 200,
+        success: true,
+        message: 'Image Removed',
+      };
+    } catch (error) {
+      throw new HttpException('Internal Server Error', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, HttpException, Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from '../../../prisma/prisma.service';
@@ -17,20 +17,18 @@ export class UserService {
 
       if (user.success) {
         return {
-          success: user.success,
-          message: user.message,
+          status: 201,
+          success: true,
+          message: "User created successfully",
         };
       } else {
-        return {
-          success: user.success,
-          message: user.message,
-        };
+        throw new HttpException(user.message, HttpStatus.BAD_REQUEST);
       }
     } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-      };
+      if(error instanceof HttpException){
+        throw error;
+      }
+      throw new HttpException('Internal server error', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -82,14 +80,13 @@ export class UserService {
       });
 
       return {
+        status: 200,
         success: true,
+        message: 'Users fetched successfully',
         data: users,
       };
     } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-      };
+      throw new HttpException('Internal server error', HttpStatus.INTERNAL_SERVER_ERROR)
     }
   }
 
@@ -113,6 +110,10 @@ export class UserService {
         },
       });
 
+      if (!user) {
+        throw new HttpException('User not found', HttpStatus.NOT_FOUND)
+      }
+
       // add avatar url to user
       if (user.avatar) {
         user['avatar_url'] = SojebStorage.url(
@@ -120,22 +121,18 @@ export class UserService {
         );
       }
 
-      if (!user) {
-        return {
-          success: false,
-          message: 'User not found',
-        };
-      }
 
       return {
+        status: 200,
         success: true,
+        message: "Get User Successfully",
         data: user,
       };
     } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-      };
+      if(error instanceof HttpException){
+        throw error
+      }
+      throw new HttpException('Internal Server Error', HttpStatus.INTERNAL_SERVER_ERROR)
     }
   }
 

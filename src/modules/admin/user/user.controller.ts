@@ -29,15 +29,8 @@ export class UserController {
   @ApiResponse({ description: 'Create a user' })
   @Post()
   async create(@Body() createUserDto: CreateUserDto) {
-    try {
       const user = await this.userService.create(createUserDto);
       return user;
-    } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-      };
-    }
   }
 
   @ApiResponse({ description: 'Get all users' })
@@ -45,19 +38,12 @@ export class UserController {
   async findAll(
     @Query() query: { q?: string; type?: string; approved?: string },
   ) {
-    try {
       const q = query.q;
       const type = query.type;
       const approved = query.approved;
 
       const users = await this.userService.findAll({ q, type, approved });
       return users;
-    } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-      };
-    }
   }
 
   // approve user
@@ -95,15 +81,8 @@ export class UserController {
   @ApiResponse({ description: 'Get a user by id' })
   @Get(':id')
   async findOne(@Param('id') id: string) {
-    try {
-      const user = await this.userService.findOne(id);
-      return user;
-    } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-      };
-    }
+    const user = await this.userService.findOne(id);
+    return user;
   }
 
   @Patch(':id')

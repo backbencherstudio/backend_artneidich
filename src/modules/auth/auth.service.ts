@@ -57,6 +57,7 @@ export class AuthService {
       if (user) {
         return {
           success: true,
+          message: 'User details fetched successfully',
           data: user,
         };
       } else {

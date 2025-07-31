@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
 import { Request } from 'express';
 import { HomeScreenService } from './home-screen.service';
 import { CreateHomeScreenDto } from './dto/create-home-screen.dto';
@@ -12,42 +12,25 @@ export class HomeScreenController {
   constructor(private readonly homeScreenService: HomeScreenService) {}
 
   @Get()
-  async findAll(@Req() req: Request) {
-    try {
-      const userId = req.user?.userId;
-      return this.homeScreenService.findAll(userId);
-    } catch (error) {
-      return {
-        success:false,
-        message: error.message
-      }
-    }
+  async findAll(@Req() req: Request, @Query('address') address: string) {
+    const userId = req.user?.userId;
+    const joblist= await this.homeScreenService.findAll(userId, address);
+    return joblist
   }
 
   @Get('project-status')
   async peojectStatus(@Req() req:Request){
-    try {
-      const userId = req.user?.userId;
-      return this.homeScreenService.projectStatus(userId);
-    } catch (error) {
-      return {
-        success:false,
-        message:error.message
-      }
-    }
+   
+    const userId = req.user?.userId;
+    const response = await this.homeScreenService.projectStatus(userId);
+    return response 
   }
 
   @Get(':id')
   async findOne(@Req() req:Request, @Param('id') id: string) {
-    try {
-      const userId = req.user?.userId;
-      return this.homeScreenService.findOne(id, userId);
-    } catch (error) {
-      return {
-        success:false,
-        message:error.message
-      }
-    }
+    const userId = req.user?.userId;
+    const response = this.homeScreenService.findOne(id, userId);
+    return response
   }
 
 

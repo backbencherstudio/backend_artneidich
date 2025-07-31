@@ -15,30 +15,23 @@ export class CreateJobController {
 
   @Get()
   async findall() {
-    try {
-      return await this.createJobService.findAll();
-    } catch (error) {
-      return {
-        message: 'Error fetching jobs',
-        error: error.message,
-      };
-    }
+    const allJobs = await this.createJobService.findAll();
+    return allJobs;
   }
 
   @Post()
   async create(@Body() createCreateJobDto: CreateCreateJobDto) {
-    try{
       // console.log(createCreateJobDto)
       if (typeof createCreateJobDto.due_date === 'string') {
         createCreateJobDto.due_date = new Date(createCreateJobDto.due_date);
       }
-      return this.createJobService.create(createCreateJobDto);
-    } catch (error) {
+      const job = await this.createJobService.create(createCreateJobDto);
       return {
-        message: 'Error creating job',
-        error: error.message,
+        status: 201,
+        success: true,
+        message: 'Job created successfully',
+        data: job,
       };
-    }
   }
 
   @Patch(':id')
@@ -46,14 +39,8 @@ export class CreateJobController {
     @Param('id') id: string,
     @Body() updateCreateJobDto: UpdateCreateJobDto
   ) {
-    try {
-      return await this.createJobService.update(id, updateCreateJobDto);
-    } catch (error) {
-      return {
-        message: 'Error updating job',
-        error: error.message,
-      };
-    }
+      const job = await this.createJobService.update(id, updateCreateJobDto);
+      return job
   }
  
   @Patch('add-note/:id')
@@ -61,38 +48,23 @@ export class CreateJobController {
     @Param('id') id: string,
     @Body() updateJobNoteDto: UpdateJobNoteDto
   ) {
-    try {
-      return await this.createJobService.updatenote(id, updateJobNoteDto.notes);
-    } catch (error) {
-      return {
-        message: 'Error updating job',
-        error: error.message,
-      };
-    }
+    
+    const updateNotes= await this.createJobService.updatenote(id, updateJobNoteDto.notes);
+    return updateNotes
   }
 
   @Delete(':id')
   async remove(@Param('id') id: string) {
-    try {
-      return await this.createJobService.delete(id);
-    } catch (error) {   
-      return {
-        message: 'Error deleting job',
-        error: error.message,
-      };
-    }
+    const job = await this.createJobService.delete(id);
+    return job
+    
   }
 
   @Get(':id')
   async findOne(@Param('id') id: string) {
-    try {
-      return await this.createJobService.findOne(id);
-    } catch (error) {
-      return {
-        message: 'Error fetching job',
-        error: error.message,
-      };
-    }
+    
+    const getJob = await this.createJobService.findOne(id);
+    return getJob
   }
 
 }

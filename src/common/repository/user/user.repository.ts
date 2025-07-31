@@ -5,6 +5,7 @@ import { PrismaClient } from '@prisma/client';
 import appConfig from '../../../config/app.config';
 import { ArrayHelper } from '../../helper/array.helper';
 import { Role } from '../../guard/role/role.enum';
+import { HttpException, HttpStatus } from '@nestjs/common';
 
 const prisma = new PrismaClient();
 
@@ -231,10 +232,7 @@ export class UserRepository {
         });
 
         if (userEmailExist) {
-          return {
-            success: false,
-            message: 'Email already exist',
-          };
+          throw new HttpException('Email already exist', HttpStatus.CONFLICT)
         }
 
         data['email'] = email;
@@ -275,16 +273,13 @@ export class UserRepository {
           data: user,
         };
       } else {
-        return {
-          success: false,
-          message: 'User creation failed',
-        };
+        throw new HttpException('User creation failed', HttpStatus.INTERNAL_SERVER_ERROR)
       }
     } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-      };
+      if(error instanceof HttpException){
+        throw error
+      }
+      throw new HttpException('Internal server error', HttpStatus.INTERNAL_SERVER_ERROR)
     }
   }
 

@@ -12,7 +12,9 @@ import {
   UploadedFiles,
   ParseFilePipe,
   MaxFileSizeValidator,
-  FileTypeValidator
+  FileTypeValidator,
+  HttpException,
+  HttpStatus
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage, memoryStorage } from 'multer';
@@ -31,52 +33,7 @@ import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 export class JobListController {
   constructor(private readonly jobListService: JobListService) {}
 
-  // @Post()
-  // @ApiOperation({ summary: 'Create a new job list entry' })
-  // async create(@Body() createJobListDto: CreateJobListDto) {
-  //   try {
-  //     console.log(createJobListDto);
-  //     return await this.jobListService.create(createJobListDto);
-  //   } catch (error) {
-  //     return {
-  //       statusCode: 500,
-  //       message: error.message,
-  //     };
-  //   }
-  // }
-
-  // @Get()
-  // @ApiOperation({ summary: 'Get all jobs for the authenticated inspector' })
-  // async findAll(@Req() req: Request) {
-  //   try {
-  //     const userId = req.user.userId;
-  //     return await this.jobListService.findAll(userId);
-  //   } catch (error) {
-  //     return {
-  //       success: false,
-  //       message: 'Error retrieving jobs',
-  //       error: error.message,
-  //     };
-  //   }
-  // }
-
-  // @Get(':id')
-  // @ApiOperation({ summary: 'Get a specific job by ID' })
-  // async findOne(@Param('id') id: string, @Req() req: Request) {
-  //   try {
-  //     const userId = req.user.userId;
-  //     return await this.jobListService.findOne(id, userId);
-  //   } catch (error) {
-  //     return {
-  //       success: false,
-  //       message: 'Error retrieving job',
-  //       error: error.message,
-  //     };
-  //   }
-  // }
-
-
-
+  
 
   @Post('upload-multiple-images')
   @ApiOperation({ summary: 'Upload multiple images for a job with their titles and descriptions' })
@@ -98,93 +55,60 @@ export class JobListController {
   async uploadMultipleJobImages(
     @Body('jobId') jobId: string,
     @Body('imageData') imageDataString: string,
+    @Body('statusType') statusType: 'draft' | 'completed',
     @UploadedFiles() images: Express.Multer.File[],
     @Req() req: Request,
   ) {
-    try {
       const userId = req.user.userId;
-  
       // Parse the JSON string from form-data
       let imageData: Array<{ title: string; description?: string }>;
       try {
         imageData = JSON.parse(imageDataString);
       } catch (parseError) {
-        return {
-          success: false,
-          message: 'Invalid imageData format. Must be a valid JSON string.',
-          error: parseError.message,
-        };
+        // Throw an HttpException with the error message and a 400 status code
+        throw new HttpException(
+          {
+            success: false,
+            message: 'Invalid imageData format. Must be a valid JSON string.',
+            error: parseError.message,
+          },
+          HttpStatus.BAD_REQUEST,
+        );
       }
       // console.log(jobId, userId, imageData, images);
-      return await this.jobListService.uploadMultipleJobImages(
+      const response = await this.jobListService.uploadMultipleJobImages(
         jobId,
         userId,
         imageData,
         images,
+        statusType
       );
+      return response
+    
+  }
+
+  @Get('all-reports')
+  async getDraftJobs(@Req() req:Request) {
+    const userId = req.user.userId;
+    const response = await this.jobListService.getDraftJobs(userId);
+    return response
+  }
+  
+  @Get('reports/:id')
+  async getDraftJobsById(@Req() req:Request, @Param('id') id: string,) {
+    const userId = req.user.userId;
+    const response = await this.jobListService.getDraftJobsById(userId, id);
+    return response
+  }
+
+  @Delete('image/:imageId')
+  async deleteImage(@Param('imageId') imageId: string) {
+    try {
+      const response = await this.jobListService.deleteImage(imageId);
+      return response;
     } catch (error) {
-      return {
-        success: false,
-        message: 'Error uploading images',
-        error: error.message,
-      };
+      throw new HttpException('Image not found', HttpStatus.NOT_FOUND);
     }
   }
 
-  // @Get(':id/images')
-  // @ApiOperation({ summary: 'Get all images for a specific job' })
-  // async getJobImages(@Param('id') jobId: string, @Req() req: Request) {
-  //   try {
-  //     const userId = req.user.userId;
-  //     return await this.jobListService.getJobImages(jobId, userId);
-  //   } catch (error) {
-  //     return {
-  //       success: false,
-  //       message: 'Error retrieving job images',
-  //       error: error.message,
-  //     };
-  //   }
-  // }
-
-  // @Patch(':id/status')
-  // @ApiOperation({ summary: 'Update job status (pending, in-progress, completed)' })
-  // async updateJobStatus(
-  //   @Param('id') jobId: string,
-  //   @Body() body: { status: string },
-  //   @Req() req: Request,
-  // ) {
-  //   try {
-  //     const userId = req.user.userId;
-  //     return await this.jobListService.updateJobStatus(jobId, userId, body.status);
-  //   } catch (error) {
-  //     return {
-  //       success: false,
-  //       message: 'Error updating job status',
-  //       error: error.message,
-  //     };
-  //   }
-  // }
-
-  // @Patch(':id')
-  // @ApiOperation({ summary: 'Update job details' })
-  // async update(
-  //   @Param('id') id: string,
-  //   @Body() updateJobListDto: UpdateJobListDto,
-  // ) {
-  //   // Implementation for updating job details
-  //   return {
-  //     success: false,
-  //     message: 'Update functionality not implemented yet',
-  //   };
-  // }
-
-  // @Delete(':id')
-  // @ApiOperation({ summary: 'Delete a job' })
-  // async remove(@Param('id') id: string) {
-  //   // Implementation for deleting jobs
-  //   return {
-  //     success: false,
-  //     message: 'Delete functionality not implemented yet',
-  //   };
-  // }
 }

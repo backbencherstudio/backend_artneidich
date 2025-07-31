@@ -8,15 +8,9 @@ export class HomepageController {
   constructor(private readonly homepageService: HomepageService) {}
 
   @Get()
-  findAll() {
-    try {
-      return this.homepageService.findAll();
-    } catch (error) {
-      return {
-        success: false,
-        message: error.message
-      }
-    }
+  async findAll() {
+    const data= await this.homepageService.findAll();
+    return data;
   }
 
 
