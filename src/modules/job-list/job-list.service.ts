@@ -4,7 +4,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { MailService } from 'src/mail/mail.service';
 import * as fs from 'fs';
 import * as path from 'path';
-10
+
 @Injectable()
 export class JobListService {
   constructor(
@@ -12,37 +12,40 @@ export class JobListService {
     private readonly mailService: MailService,
   ) {}
 
-  async uploadMultipleJobImages(
+  async sendInspectionPDF(
     jobId: string,
-    userId: string,
-    imageData: Array<{ title: string; description?: string }>,
-    images: Express.Multer.File[],
-    statusType: 'draft' | 'completed'
+    userId: string
   ) {
-    // 1. Validate image data
-    if (images.length !== imageData.length) {
-      throw new HttpException(
-        {
-          success: false,
-          message: 'Number of images does not match number of imageData entries',
-        },
-        HttpStatus.BAD_REQUEST, // Status code 400 (Bad Request)
-      );
-    }
 
     const jobData = await this.prisma.jobs.findUnique({
       where: { id: jobId },
+      include: { areas: { include: { images: true } } }, // fetch areas and images
     });
-
-    // 2. Generate PDF
-    const pdfDir = './public/storage/inspection-pdf';
-    if (!fs.existsSync(pdfDir)) {
-      fs.mkdirSync(pdfDir, { recursive: true });
+  
+    if (!jobData) throw new HttpException('Job not found', HttpStatus.NOT_FOUND);
+    
+    if (jobData.inspector_id !== userId) {
+      throw new HttpException('Unauthorized', HttpStatus.FORBIDDEN);
     }
-    const pdfPath = path.join(pdfDir, `${jobId}.pdf`);
+    
+    const selectedAreas = jobData.areas;
+
+
+    if (selectedAreas.length === 0) throw new HttpException('No areas found', HttpStatus.NOT_FOUND);
+
+    // ✅ 3. Get all images from selected areas
+    const allImages = selectedAreas.flatMap(area => area.images);
+
+    if (allImages.length === 0) throw new HttpException('No images found', HttpStatus.NOT_FOUND);
+
+    // ✅ 4. Prepare PDF path
+    const pdfDir = './public/storage/inspection-pdf';
+    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
+    const pdfPath = path.join( `${jobId}.pdf`);
+
     const doc = new PDFDocument({
       size: [595.28, 1000],
-      margins: { top: 50, bottom: 0, left: 50, right: 50 }, // bottom margin = 0
+      margins: { top: 50, bottom: 0, left: 50, right: 50 },
     });
 
     doc.pipe(fs.createWriteStream(pdfPath));
@@ -128,50 +131,34 @@ export class JobListService {
     const verticalGap = 30;  // Gap between two images on one page
     const titleGap = 5;      // Gap between an image and its title
 
-    while (imageIndex < images.length) {
-      // Current Y coordinate reset for each new page
+    while (imageIndex < allImages.length) {
       let currentY = marginTop;
       const centerX = (doc.page.width - imageWidth) / 2;
-
-      // ---------- first image ----------
-      doc.image(images[imageIndex].path, centerX, currentY, {
+  
+      const imgPath = path.join('public', 'storage', 'inspection-images', allImages[imageIndex].file_path);
+      doc.image(imgPath, centerX, currentY, { width: imageWidth, height: imageHeight });
+      doc.fontSize(10).text(allImages[imageIndex].title || '', centerX, currentY + imageHeight + titleGap, {
+        align: 'center',
         width: imageWidth,
-        height: imageHeight,
       });
-      doc.fontSize(10).text(
-        imageData[imageIndex].title,
-        centerX,
-        currentY + imageHeight + titleGap,
-        { align: 'center', width: imageWidth },
-      );
       imageIndex++;
-
-      // Advance Y to position the second image (if any)
+  
       currentY += imageHeight + titleGap + verticalGap;
-
-      // ---------- second image (if available) ----------
-      if (imageIndex < images.length) {
-        doc.image(images[imageIndex].path, centerX, currentY, {
+  
+      if (imageIndex < allImages.length) {
+        const imgPath2 = path.join('public', 'storage', 'inspection-images', allImages[imageIndex].file_path);
+        doc.image(imgPath2, centerX, currentY, { width: imageWidth, height: imageHeight });
+        doc.fontSize(10).text(allImages[imageIndex].title || '', centerX, currentY + imageHeight + titleGap, {
+          align: 'center',
           width: imageWidth,
-          height: imageHeight,
         });
-        doc.fontSize(10).text(
-          imageData[imageIndex].title,
-          centerX,
-          currentY + imageHeight + titleGap,
-          { align: 'center', width: imageWidth },
-        );
         imageIndex++;
       }
-
-      // ---------- footer ----------
+  
       addFooter(doc, pageNumber);
       pageNumber++;
-
-      // If more images remain, add a new page (header will be drawn automatically by listener)
-      if (imageIndex < images.length) {
-        doc.addPage();
-      }
+  
+      if (imageIndex < allImages.length) doc.addPage();
     }
 
     // Finalize the PDF
@@ -180,39 +167,20 @@ export class JobListService {
     // 3. Save the PDF name to the database
     await this.prisma.jobs.update({
       where: { id: jobId },
-      data: { pdf_data: pdfPath },
+      data: { pdf_data: pdfPath, working_status: 'completed' },
     });
-
-    // Save each image's info in the JobImage table
-    for (let i = 0; i < images.length; i++) {
-      await this.prisma.jobImage.create({
-        data: {
-          job_id: jobId,
-          file_path: images[i].path, // or images[i].filename if you want just the filename
-          title: imageData[i].title,
-          description: imageData[i].description || null,
-        },
-      });
-    }
-
-    // 4. Send the PDF to the admin through email
-    if (statusType === 'completed') {
-      await this.mailService.sendInspectionPDF({
-        email: process.env.MAIL_USERNAME,
-        jobId: jobId,
-        jobData: jobData,
-      });
-    }
     
-    // 5. Update the job status to completed
-    await this.prisma.jobs.update({
-      where: { id: jobId },
-      data: { working_status: statusType },
+    await this.mailService.sendInspectionPDF({
+      email: process.env.MAIL_USERNAME,
+      jobId,
+      jobData,
     });
-    return { status:201, success: true, message:
-      statusType === 'completed'
-        ? 'Inspection Report has been sent to the admin.'
-        : 'Draft saved successfully.',
+  
+    return {
+      status: 201,
+      success: true,
+      message: 'Inspection PDF generated and sent.',
+      pdf_url: `/public/storage/inspection-pdf/${jobId}.pdf`,
     };
   }
 
@@ -225,36 +193,83 @@ export class JobListService {
           images: true,  // Include the related images
         },
       });
+      const formatted = response.map(job => ({
+        ...job,
+        pdf_data: job.pdf_data 
+          ? `public/storage/inspection-pdf/${job.pdf_data}` // ✅ prefix only if pdf exists
+          : null,
+      }));
       return{
         status: 200,
         success: true,
         message: 'Fetch all Reports',
-        data: response
+        data: formatted
       }
     } catch (error) {
       throw new HttpException('Internal Server Error', HttpStatus.INTERNAL_SERVER_ERROR)
     }
   }
   
-  async getDraftJobsById(userId,Id) {
-    try {
-      const response = await this.prisma.jobs.findFirst({
-        where: { working_status: 'draft', id: Id, inspector_id: userId },
-        include: {
-          images: true,  // Include the related images
-        },
-      });
-      return{
-        status: 200,
-        success: true,
-        message: 'Fetch Report Successfully',
-        data: response
-      }
-    } catch (error) {
-      throw new HttpException('Internal Server Error', HttpStatus.INTERNAL_SERVER_ERROR)
+  async getDraftJobsById(userId: string, jobId: string) {
+    const job = await this.prisma.jobs.findFirst({
+      where: {
+        working_status: 'pending',
+        id: jobId,
+        inspector_id: userId,
+      },
+      include: {
+        areas: { include: { images: true } },  // ✅ get areas with images
+      },
+    });
+  
+    if (!job) {
+      return { status: 404, success: false, message: 'Draft report not found', data: null };
     }
+  
+    const formattedAreas = job.areas.map(area => ({
+      area_id: area.id,
+      area_name: area.name,
+      note: area.note,
+      images: area.images.map(img => ({
+        ...img,
+        image_id: img.id,
+        file_path: `/public/storage/inspection-images/${img.file_path}`,
+      })),
+    }));
+  
+    return {
+      status: 200,
+      success: true,
+      message: 'Fetch Report Successfully',
+      data: {
+        id: job.id,
+        inspector_id: job.inspector_id,
+        inspector_name: job.inspector_name,
+        inspection_type: job.inspection_type,
+        address: job.address,
+        fha_number: job.fha_number,
+        created_at: job.created_at,
+        completed_at: job.completed_at,
+        status: job.status,
+        standard_fee: job.standard_fee,
+        rush_fee: job.rush_fee,
+        occupied_fee: job.occupied_fee,
+        long_range_fee: job.long_range_fee,
+        notes: job.notes,
+        working_status: job.working_status,
+        due_date: job.due_date,
+        pdf_data: job.pdf_data
+          ? `public/storage/inspection-pdf/${job.pdf_data}`
+          : null,
+        areas: formattedAreas,
+      },
+    };
   }
-
+  
+  
+  
+  
+  
   async deleteImage(imageId: string) {
     try {
       // Find the image by ID first to check if it exists
@@ -291,4 +306,133 @@ export class JobListService {
       throw new HttpException('Internal Server Error', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
+
+  async createJobArea(jobId: string, name: string, note?: string) {
+    try {
+      console.log(jobId, name, note);
+      const area = await this.prisma.jobArea.create({
+        data: { job_id: jobId, name, note: note ?? null },
+      });
+      return { status: 201, success: true, message: 'Area created successfully', data: area };
+    } catch {
+      throw new HttpException('Could not create area', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+    }
+
+  async bulkUploadJobImages(
+    payload: {
+      jobId: string;
+      statusType: 'draft';
+      areas: {
+        areaId?: string;
+        name?: string;
+        note?: string;
+        images: { title: string; description?: string; fileIndex: number }[];
+      }[];
+    },
+    files: Express.Multer.File[],
+    userId: string,
+  ) {
+    const { jobId, areas } = payload;
+    const groupedAreas: Record<string, any[]> = {};
+
+
+    for (const areaPayload of areas) {
+      let area;
+      if (areaPayload.areaId) {
+        area = await this.prisma.jobArea.findUnique({ where: { id: areaPayload.areaId } });
+      } else if (areaPayload.name) {
+        area = await this.prisma.jobArea.create({
+          data: { job_id: jobId, name: areaPayload.name, note: areaPayload.note ?? null },
+        });
+      }
+      if (!area) throw new HttpException('Area not found', HttpStatus.NOT_FOUND);
+
+      if (areaPayload.note && areaPayload.note !== area.note) {
+        await this.prisma.jobArea.update({ where: { id: area.id }, data: { note: areaPayload.note } });
+      }
+
+      for (const img of areaPayload.images) {
+        const file = files[img.fileIndex];
+        if (!file) {
+          throw new HttpException(`Missing file at index ${img.fileIndex}`, HttpStatus.BAD_REQUEST);
+        }
+        const existing = await this.prisma.jobImage.findFirst({
+          where: {
+            job_id: jobId,
+            area_id: area.id,
+            file_path: file.filename,
+          },
+        });
+        
+        if (!existing) {
+          const createdImage = await this.prisma.jobImage.create({
+            data: {
+              job_id: jobId,
+              area_id: area.id,
+              file_path: file.filename,
+              title: img.title ?? '',
+              description: img.description ?? null,
+            },
+          });
+        
+          if (!groupedAreas[area.id]) groupedAreas[area.id] = [];
+          groupedAreas[area.id].push(createdImage);
+        } else {
+          // Optional: you can push existing image to response instead of skipping
+          if (!groupedAreas[area.id]) groupedAreas[area.id] = [];
+          groupedAreas[area.id].push(existing);
+        }
+      }
+    }
+    const data = Object.keys(groupedAreas).map(areaId => ({
+      area_id: areaId,
+      images: groupedAreas[areaId],
+    }));
+    return { status: 201, success: true, message: 'Images uploaded to all areas.', 
+      data: Object.keys(groupedAreas).map(areaId => ({
+      area_id: areaId,
+      images: groupedAreas[areaId].map(img => ({
+        ...img,
+        file_path: `/public/storage/inspection-images/${img.file_path}` // ✅ add prefix only in response
+      }))
+    })) };
+  }
+
+  // async uploadAreaImages(
+  //   areaId: string,
+  //   imageData: Array<{ title: string; description?: string }>,
+  //   images: Express.Multer.File[],
+  //   statusType: 'draft' | 'completed' = 'draft',
+  // ) {
+  //   if (images.length !== imageData.length) {
+  //     throw new HttpException('Number of images does not match imageData length', HttpStatus.BAD_REQUEST);
+  //   }
+
+  //   const area = await this.prisma.jobArea.findUnique({ where: { id: areaId }, include: { job: true } });
+  //   if (!area) throw new HttpException('Area not found', HttpStatus.NOT_FOUND);
+
+  //   for (let i = 0; i < images.length; i++) {
+  //     await this.prisma.jobImage.create({
+  //       data: {
+  //         job_id: area.job_id,
+  //         area_id: areaId,
+  //         file_path: images[i].path,
+  //         title: imageData[i].title,
+  //         description: imageData[i].description ?? null,
+  //       },
+  //     });
+  //   }
+
+  //   return { status: 201, success: true, message: 'Images uploaded to area.' };
+  // }
+
+  // async listJobAreas(jobId: string) {
+  //   const areas = await this.prisma.jobArea.findMany({
+  //     where: { job_id: jobId },
+  //     include: { images: true },
+  //     orderBy: { created_at: 'asc' },
+  //   });
+  //   return { status: 200, success: true, data: areas };
+  // }
 }

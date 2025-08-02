@@ -458,8 +458,29 @@ model Jobs{
   inspector      User      @relation(fields: [inspector_id], references: [id])
   
   images      JobImage[]
+  areas       JobArea[]
   
   @@map("jobs")
+}
+
+model JobArea {
+  id          String   @id @default(cuid())
+  job_id      String
+  job         Jobs     @relation(fields: [job_id], references: [id], onDelete: Cascade)
+
+  // “Kitchen”, “Hallway”, “Master Bathroom”, etc.
+  name        String
+
+  // One optional note that applies to the whole area
+  note        String?
+
+  created_at  DateTime @default(now())
+
+  // 1-N relation to the pictures that belong to this area
+  images      JobImage[]
+
+  @@index([job_id])
+  @@map("job_areas")
 }
 
 model JobImage {
@@ -470,6 +491,9 @@ model JobImage {
   title       String
   description String?
   created_at  DateTime @default(now())
+
+  area_id   String?
+  area      JobArea? @relation(fields: [area_id], references: [id], onDelete: Cascade)
 
   @@map("job_images")
 }

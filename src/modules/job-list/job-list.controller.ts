@@ -14,9 +14,10 @@ import {
   MaxFileSizeValidator,
   FileTypeValidator,
   HttpException,
-  HttpStatus
+  HttpStatus,
+  Query
 } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { AnyFilesInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage, memoryStorage } from 'multer';
 import { Request } from 'express';
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiConsumes } from '@nestjs/swagger';
@@ -24,6 +25,8 @@ import { JobListService } from './job-list.service';
 import { CreateJobListDto } from './dto/create-job-list.dto';
 import { UpdateJobListDto } from './dto/update-job-list.dto';
 import { UploadJobImageDto } from './dto/upload-job-image.dto';
+import { CreateJobAreaDto } from './dto/create-job-area.dto';
+import { UploadAreaImagesDto } from './dto/upload-area-images.dto';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 
 @ApiTags('Job List')
@@ -35,57 +38,43 @@ export class JobListController {
 
   
 
-  @Post('upload-multiple-images')
+  @Patch('upload-multiple-images')
   @ApiOperation({ summary: 'Upload multiple images for a job with their titles and descriptions' })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
-    FilesInterceptor('images', 20, { // Allow up to 20 images
+    AnyFilesInterceptor({
       storage: diskStorage({
         destination: './public/storage/inspection-images',
-        filename: (req, file, cb) =>{
-          const randomName = Array(32)
-            .fill(null)
-            .map(() => Math.round(Math.random() * 16).toString(16))
-            .join('');
-          cb(null, `${randomName}${file.originalname}`); 
-        }
-      })
+        filename: (_, file, cb) =>
+          cb(null, Array(32).fill(null)
+            .map(() => Math.random().toString(16).slice(2,3)).join('') + file.originalname),
+      }),
     }),
   )
+  
   async uploadMultipleJobImages(
-    @Body('jobId') jobId: string,
-    @Body('imageData') imageDataString: string,
-    @Body('statusType') statusType: 'draft' | 'completed',
-    @UploadedFiles() images: Express.Multer.File[],
+    @Body('payload') payloadString: string,
+    @UploadedFiles() files: Express.Multer.File[],
     @Req() req: Request,
   ) {
-      const userId = req.user.userId;
-      // Parse the JSON string from form-data
-      let imageData: Array<{ title: string; description?: string }>;
-      try {
-        imageData = JSON.parse(imageDataString);
-      } catch (parseError) {
-        // Throw an HttpException with the error message and a 400 status code
-        throw new HttpException(
-          {
-            success: false,
-            message: 'Invalid imageData format. Must be a valid JSON string.',
-            error: parseError.message,
-          },
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-      // console.log(jobId, userId, imageData, images);
-      const response = await this.jobListService.uploadMultipleJobImages(
-        jobId,
-        userId,
-        imageData,
-        images,
-        statusType
-      );
-      return response
-    
+    const payload = JSON.parse(payloadString);  
+    const response = await this.jobListService.bulkUploadJobImages(
+      payload, files, req.user.userId,
+    );
+    return response;
   }
+
+  @Post('submit-report/:jobId')
+  @ApiOperation({ summary: 'Generate inspection PDF from saved images' })
+  async generateInspectionPDF(
+    @Param('jobId') jobId: string,
+    @Req() req: Request,
+  ) {
+    const userId = req.user.userId;              // get inspector ID from auth
+    const response = await this.jobListService.sendInspectionPDF(jobId, userId);
+    return response;
+  }
+
 
   @Get('all-reports')
   async getDraftJobs(@Req() req:Request) {
@@ -100,6 +89,43 @@ export class JobListController {
     const response = await this.jobListService.getDraftJobsById(userId, id);
     return response
   }
+
+  // ------- Area APIs -------
+  @Post('job-areas')
+  async createArea(@Body() body: CreateJobAreaDto) {
+    const response = await this.jobListService.createJobArea(body.jobId, body.name, body.note);
+    return response
+  }
+
+  
+
+  // @Post('areas/upload-images')
+  // @ApiConsumes('multipart/form-data')
+  // @UseInterceptors(
+  //   FilesInterceptor('images', 20, {
+  //     storage: diskStorage({
+  //       destination: './public/storage/inspection-images',
+  //       filename: (req, file, cb) => {
+  //         const randomName = Array(32)
+  //           .fill(null)
+  //           .map(() => Math.round(Math.random() * 16).toString(16))
+  //           .join('');
+  //         cb(null, `${randomName}${file.originalname}`);
+  //       },
+  //     }),
+  //   }),
+  // )
+  // async uploadAreaImages(
+  //   @Body() dto: UploadAreaImagesDto,
+  //   @UploadedFiles() images: Express.Multer.File[],
+  // ) {
+  //   return this.jobListService.uploadAreaImages(dto.areaId, dto.imageData, images, dto.statusType);
+  // }
+
+  // @Get(':jobId/areas')
+  // async listAreas(@Param('jobId') jobId: string) {
+  //   return this.jobListService.listJobAreas(jobId);
+  // }
 
   @Delete('image/:imageId')
   async deleteImage(@Param('imageId') imageId: string) {

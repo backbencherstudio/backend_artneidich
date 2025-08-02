@@ -21,13 +21,14 @@ export class HomeScreenService {
       }
 
       const whereConditions:any = {
-        inspector_id:userId
+        inspector_id:userId,
+        working_status:'pending'
       }
       // If an address is provided, add the filter to the query
       if (address) {
         whereConditions.address = {
           contains: address, // Performs a "like" search on the address field
-          mode: 'insensitive', // Make the search case-insensitive
+          mode: 'insensitive', // M ake the search case-insensitive
         };
       }
 
