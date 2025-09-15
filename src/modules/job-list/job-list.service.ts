@@ -41,7 +41,7 @@ export class JobListService {
     // ✅ 4. Prepare PDF path
     const pdfDir = './public/storage/inspection-pdf';
     if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
-    const pdfPath = path.join( `${jobId}.pdf`);
+    const pdfPath = path.join(pdfDir, `${jobId}.pdf`);
 
     const doc = new PDFDocument({
       size: [595.28, 1000],
@@ -71,7 +71,7 @@ export class JobListService {
       doc.font('Helvetica-Bold').fontSize(10).text(`Subject Property : ${jobData.address}`, { align: 'left' });
       doc.y += 10;
     }
-
+  
     // Add Footer function (for page number and footer image)
     function addFooter(doc, pageNumber: number) {
       const pageWidth = doc.page.width;
@@ -322,7 +322,7 @@ export class JobListService {
   async bulkUploadJobImages(
     payload: {
       jobId: string;
-      statusType: 'draft';
+      statusType: 'draft' | 'submit';
       areas: {
         areaId?: string;
         name?: string;
@@ -333,7 +333,7 @@ export class JobListService {
     files: Express.Multer.File[],
     userId: string,
   ) {
-    const { jobId, areas } = payload;
+    const { jobId, areas, statusType } = payload;
     const groupedAreas: Record<string, any[]> = {};
 
 
@@ -385,6 +385,19 @@ export class JobListService {
         }
       }
     }
+
+    // Handle different status types
+    if (statusType === 'draft') {
+      // Update job working status to draft
+      await this.prisma.jobs.update({
+        where: { id: jobId },
+        data: { working_status: 'draft' }
+      });
+    } else if (statusType === 'submit') {
+      // Generate and send inspection PDF
+      await this.sendInspectionPDF(jobId, userId);
+    }
+
     const data = Object.keys(groupedAreas).map(areaId => ({
       area_id: areaId,
       images: groupedAreas[areaId],
