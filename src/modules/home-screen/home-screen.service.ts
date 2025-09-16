@@ -20,9 +20,12 @@ export class HomeScreenService {
         throw new HttpException('User Not Found', HttpStatus.NOT_FOUND)
       }
 
+      // get all jobs where working_status is pending and draft
       const whereConditions:any = {
         inspector_id:userId,
-        working_status:'pending'
+        working_status:{
+          in:['pending', 'draft']
+        }
       }
       // If an address is provided, add the filter to the query
       if (address) {

@@ -213,7 +213,9 @@ export class JobListService {
   async getDraftJobsById(userId: string, jobId: string) {
     const job = await this.prisma.jobs.findFirst({
       where: {
-        working_status: 'pending',
+        working_status: {
+          in: ['pending', 'draft']
+        },
         id: jobId,
         inspector_id: userId,
       },
