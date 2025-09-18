@@ -99,9 +99,7 @@ export class AuthService {
       if (updateUserDto.state) {
         data.state = updateUserDto.state;
       }
-      if (updateUserDto.local_government) {
-        data.local_government = updateUserDto.local_government;
-      }
+      
       if (updateUserDto.city) {
         data.city = updateUserDto.city;
       }

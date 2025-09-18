@@ -24,12 +24,6 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   })
   city?: string;
 
-  @IsOptional()
-  @ApiProperty({
-    description: 'Local government',
-    example: 'Lagos',
-  })
-  local_government?: string;
 
   @IsOptional()
   @ApiProperty({
