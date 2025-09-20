@@ -250,8 +250,10 @@ export class AuthService {
         user['avatar_url'] = SojebStorage.url(
           appConfig().storageUrl.avatar + user.avatar,
         );
+      }else{
+        user['avatar_url'] = null;
       }
-
+      // console.log(user);
       return {
         success: true,
         message: 'Logged in successfully',
