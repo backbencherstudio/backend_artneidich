@@ -52,6 +52,8 @@ export class AuthService {
         user['avatar_url'] = SojebStorage.url(
           appConfig().storageUrl.avatar + user.avatar,
         );
+      }else{
+        user['avatar_url'] = null;
       }
 
       if (user) {
