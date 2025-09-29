@@ -61,7 +61,7 @@ export class CreateJobService {
           throw new HttpException('User Not Found', HttpStatus.NOT_FOUND)
         }
       }
-
+      // add new
       const job = await this.prisma.jobs.update({
         where: { id },
         data: {
