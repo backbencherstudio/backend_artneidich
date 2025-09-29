@@ -6,7 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "nest build",
+    "build": "npx prisma migrate deploy && nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -19,7 +19,8 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "cmd": "cross-env PRISMA_ENV=1 ts-node src/cmd.ts"
+    "cmd": "cross-env PRISMA_ENV=1 ts-node src/cmd.ts",
+    "postinstall": "npx prisma generate"
   },
   "dependencies": {
     "@casl/ability": "6.7.3",
