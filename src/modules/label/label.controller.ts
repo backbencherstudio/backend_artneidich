@@ -8,7 +8,7 @@ import { Request } from 'express';
 @Controller('label')
 export class LabelController {
   constructor(private readonly labelService: LabelService) {}
-
+  // get all areas
   @UseGuards(JwtAuthGuard)
   @Get('user-areas')
   async getUserAreas(@Req() req: Request) {
