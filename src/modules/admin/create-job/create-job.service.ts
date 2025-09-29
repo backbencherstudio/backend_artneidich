@@ -27,6 +27,9 @@ export class CreateJobService {
           inspector_id: createCreateJobDto.userID,
           inspector_name: createCreateJobDto.inspector_name,
           inspection_type: createCreateJobDto.inspection_type,
+          client_name: createCreateJobDto.client_name,
+          client_email: createCreateJobDto.client_email,
+          client_phone: createCreateJobDto.client_phone,
           address: createCreateJobDto.address,
           fha_number: createCreateJobDto.fha_number,
           status: createCreateJobDto.status,
@@ -59,12 +62,15 @@ export class CreateJobService {
         }
       }
 
-
       const job = await this.prisma.jobs.update({
         where: { id },
         data: {
           inspector_id: updateCreateJobDto.userID,
           inspector_name: updateCreateJobDto.inspector_name,
+          inspection_type: updateCreateJobDto.inspection_type,
+          client_name: updateCreateJobDto.client_name,
+          client_email: updateCreateJobDto.client_email,
+          client_phone: updateCreateJobDto.client_phone,
           address: updateCreateJobDto.address,
           fha_number: updateCreateJobDto.fha_number,
           status: updateCreateJobDto.status,

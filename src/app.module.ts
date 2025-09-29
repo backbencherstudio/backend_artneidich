@@ -21,6 +21,7 @@ import { ChatModule } from './modules/chat/chat.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { HomeScreenModule } from './modules/home-screen/home-screen.module';
 import { JobListModule } from './modules/job-list/job-list.module';
+import { LabelModule } from './modules/label/label.module';
 
 @Module({
   imports: [
@@ -69,6 +70,7 @@ import { JobListModule } from './modules/job-list/job-list.module';
     PaymentModule,
     HomeScreenModule,
     JobListModule,
+    LabelModule,
   ],
   controllers: [AppController],
   providers: [

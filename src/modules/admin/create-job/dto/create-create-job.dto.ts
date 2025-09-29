@@ -1,4 +1,4 @@
-import { IsDate, IsObject, IsOptional, IsString } from "class-validator";
+import { IsDate, IsEmail, IsObject, IsOptional, IsString } from "class-validator";
 
 import { IsNotEmpty } from "class-validator";
 
@@ -15,6 +15,18 @@ export class CreateCreateJobDto {
     @IsString()
     @IsNotEmpty()
     inspection_type: string;
+    
+    @IsString()
+    @IsNotEmpty()
+    client_name: string;
+    
+    @IsEmail()
+    @IsNotEmpty()
+    client_email: string;
+    
+    @IsString()
+    @IsNotEmpty()
+    client_phone: string;
 
     @IsOptional()
     @IsNotEmpty()
