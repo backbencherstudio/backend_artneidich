@@ -10,7 +10,7 @@ export class CreateJobAreaDto {
   @IsNotEmpty()
   @IsString()
   @ApiProperty({ description: 'Area name, e.g. Kitchen, Hallway' })
-  name: string;
+  labelId: string;
 
   @IsOptional()
   @IsString()

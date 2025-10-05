@@ -93,7 +93,7 @@ export class JobListController {
   // ------- Area APIs -------
   @Post('job-areas')
   async createArea(@Body() body: CreateJobAreaDto) {
-    const response = await this.jobListService.createJobArea(body.jobId, body.name, body.note);
+    const response = await this.jobListService.createJobArea(body.jobId, body.labelId, body.note);
     return response
   }
 

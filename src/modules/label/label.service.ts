@@ -9,38 +9,33 @@ export class LabelService {
 
   async getUserAreas(userId: string) {
     try {
-      const areas = await this.prisma.jobArea.findMany({
-        where: {
-          job: {
-            inspector_id: userId
-          }
-        },
-        select: {
-          id: true,
-          name: true,
-          note: true,
-          created_at: true,
-          job: {
-            select: {
-              id: true,
-              inspection_type: true,
-              client_name: true,
-              address: true,
-              status: true
-            }
-          }
-        },
-        orderBy: {
-          created_at: 'desc'
-        }
-      });
+      const labels = await this.prisma.label.findMany();
 
       return {
         success: true,
-        data: areas,
-        message: 'User areas retrieved successfully'
+        data: labels,
+        message: 'User labels retrieved successfully'
       };
     } catch (error) {
+      return {
+        success: false,
+        message: error.message
+      };
+    }
+  }
+
+  async postAdminLabels(body: any) {
+    try {
+      const label = await this.prisma.label.create({
+        data: body
+      });
+      return {
+        success: true,
+        message: 'Label created successfully',
+        data: label
+      };
+    }
+    catch (error) {
       return {
         success: false,
         message: error.message
@@ -60,18 +55,12 @@ export class LabelService {
     return `This action updates a #${id} label`;
   }
 
-  async deleteArea(areaId: string, userId: string) {
+  async deleteArea(labelId: string) {
     try {
       // First, verify that the area belongs to a job created by this user
-      const area = await this.prisma.jobArea.findFirst({
+      const area = await this.prisma.label.findFirst({
         where: {
-          id: areaId,
-          job: {
-            inspector_id: userId
-          }
-        },
-        include: {
-          job: true
+          id: labelId,
         }
       });
 
@@ -83,15 +72,15 @@ export class LabelService {
       }
 
       // Delete the area
-      await this.prisma.jobArea.delete({
+      await this.prisma.label.delete({
         where: {
-          id: areaId
+          id: labelId
         }
       });
 
       return {
         success: true,
-        message: 'Area deleted successfully'
+        message: 'label deleted successfully'
       };
     } catch (error) {
       return {

@@ -7,6 +7,7 @@ import { Roles } from 'src/common/guard/role/roles.decorator';
 import { Role } from 'src/common/guard/role/role.enum';
 import { RolesGuard } from 'src/common/guard/role/roles.guard';
 
+
 @Controller('admin/create-job')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.ADMIN)

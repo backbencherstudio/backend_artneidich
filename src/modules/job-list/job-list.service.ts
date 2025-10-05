@@ -220,7 +220,7 @@ export class JobListService {
         inspector_id: userId,
       },
       include: {
-        areas: { include: { images: true } },  // ✅ get areas with images
+        areas: { include: { images: true, label: true } },  // ✅ get areas with images and label
       },
     });
   
@@ -230,7 +230,7 @@ export class JobListService {
   
     const formattedAreas = job.areas.map(area => ({
       area_id: area.id,
-      area_name: area.name,
+      area_name: area.label.name,
       note: area.note,
       images: area.images.map(img => ({
         ...img,
@@ -309,11 +309,11 @@ export class JobListService {
     }
   }
 
-  async createJobArea(jobId: string, name: string, note?: string) {
+  async createJobArea(jobId: string, labelId: string, note?: string) {
     try {
-      console.log(jobId, name, note);
+      console.log(jobId, labelId, note);
       const area = await this.prisma.jobArea.create({
-        data: { job_id: jobId, name, note: note ?? null },
+        data: { job_id: jobId, label_id: labelId, note: note ?? null },
       });
       return { status: 201, success: true, message: 'Area created successfully', data: area };
     } catch {
@@ -345,7 +345,7 @@ export class JobListService {
         area = await this.prisma.jobArea.findUnique({ where: { id: areaPayload.areaId } });
       } else if (areaPayload.name) {
         area = await this.prisma.jobArea.create({
-          data: { job_id: jobId, name: areaPayload.name, note: areaPayload.note ?? null },
+          data: { job_id: jobId, label_id: areaPayload.name, note: areaPayload.note ?? null },
         });
       }
       if (!area) throw new HttpException('Area not found', HttpStatus.NOT_FOUND);
