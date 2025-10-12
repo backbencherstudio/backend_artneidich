@@ -373,7 +373,7 @@ model Jobs {
   client_phone    String?
   areas           JobArea[]
   images          JobImage[]
-  inspector       User       @relation(fields: [inspector_id], references: [id])
+  inspector       User       @relation(fields: [inspector_id], references: [id], onDelete: Cascade)
 
   @@map("jobs")
 }
