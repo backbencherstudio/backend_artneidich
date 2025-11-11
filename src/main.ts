@@ -15,17 +15,13 @@ import { SojebStorage } from './common/lib/Disk/SojebStorage';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     rawBody: true,
-    bodyParser: true, // Keep body parser enabled
+    bodyParser: false, // Disable default body parser to configure manually
   });
 
-  // Override body parser with increased size limits for file uploads
+  // Configure body parser with size limits for file uploads
   // Note: multipart/form-data is handled by multer, not these parsers
-  // But we configure these for JSON/URL-encoded requests
-  const expressApp = app.getHttpAdapter().getInstance();
-  
-  // Remove default body parsers and add custom ones with limits
-  expressApp.use(express.json({ limit: '50mb' }));
-  expressApp.use(express.urlencoded({ limit: '50mb', extended: true }));
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
   // Handle raw body for webhooks
   // app.use('/payment/stripe/webhook', express.raw({ type: 'application/json' }));
