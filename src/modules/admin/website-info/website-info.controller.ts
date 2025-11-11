@@ -39,6 +39,12 @@ export class WebsiteInfoController {
       ],
       {
         storage: memoryStorage(),
+        limits: {
+          fileSize: 50 * 1024 * 1024, // 50MB limit per file
+          fieldSize: 50 * 1024 * 1024, // 50MB limit for fields
+          fields: 10, // Limit number of fields
+          fieldNameSize: 100, // Limit field name size
+        },
       },
     ),
   )

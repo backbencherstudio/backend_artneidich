@@ -49,6 +49,12 @@ export class JobListController {
           cb(null, Array(32).fill(null)
             .map(() => Math.random().toString(16).slice(2,3)).join('') + file.originalname),
       }),
+      limits: {
+        fileSize: 50 * 1024 * 1024, // 50MB limit per file
+        fieldSize: 50 * 1024 * 1024, // 50MB limit for fields
+        files: 20, // Limit number of files
+        fieldNameSize: 100, // Limit field name size
+      },
     }),
   )
   

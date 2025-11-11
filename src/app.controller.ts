@@ -62,7 +62,13 @@ export class AppController {
 
   @Post('test-file-upload')
   @UseInterceptors(
-    FileInterceptor('image', { storage: multer.memoryStorage() as any }),
+    FileInterceptor('image', {
+      storage: multer.memoryStorage() as any,
+      limits: {
+        fileSize: 50 * 1024 * 1024, // 50MB limit per file
+        fieldSize: 50 * 1024 * 1024, // 50MB limit for fields
+      },
+    }),
   )
   async test(@UploadedFile() image?: Express.Multer.File) {
     try {
