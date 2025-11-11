@@ -159,7 +159,10 @@ export class AuthController {
       // }),
       storage: memoryStorage(),
       limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB limit
+        fileSize: 10 * 1024 * 1024, // 10MB limit per file
+        fieldSize: 10 * 1024 * 1024, // 10MB limit for fields
+        fields: 10, // Limit number of fields
+        fieldNameSize: 100, // Limit field name size
       },
     }),
   )
