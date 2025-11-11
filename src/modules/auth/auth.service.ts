@@ -123,7 +123,7 @@ export class AuthService {
           where: { id: userId },
           select: { avatar: true },
         });
-        if (oldImage.avatar) {
+        if (oldImage && oldImage.avatar) {
           await SojebStorage.delete(
             appConfig().storageUrl.avatar + oldImage.avatar,
           );

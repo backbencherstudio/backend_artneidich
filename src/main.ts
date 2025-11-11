@@ -5,7 +5,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { join } from 'path';
-// import express from 'express';
+import * as express from 'express';
 // internal imports
 import { AppModule } from './app.module';
 import appConfig from './config/app.config';
@@ -15,7 +15,12 @@ import { SojebStorage } from './common/lib/Disk/SojebStorage';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     rawBody: true,
+    bodyParser: false, // Disable default body parser to configure manually
   });
+
+  // Configure body parser with size limits for file uploads
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
   // Handle raw body for webhooks
   // app.use('/payment/stripe/webhook', express.raw({ type: 'application/json' }));
