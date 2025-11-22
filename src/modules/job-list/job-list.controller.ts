@@ -45,9 +45,17 @@ export class JobListController {
     AnyFilesInterceptor({
       storage: diskStorage({
         destination: './public/storage/inspection-images',
-        filename: (_, file, cb) =>
-          cb(null, Array(32).fill(null)
-            .map(() => Math.random().toString(16).slice(2,3)).join('') + file.originalname),
+        filename: (_, file, cb) => {
+          // Generate random prefix
+          const randomPrefix = Array(32).fill(null)
+            .map(() => Math.random().toString(16).slice(2, 3)).join('');
+          
+          // Sanitize filename: remove special characters, keep only alphanumeric, dots, hyphens, underscores
+          const sanitizedName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+          
+          // Combine random prefix with sanitized filename
+          cb(null, randomPrefix + sanitizedName);
+        },
       }),
       limits: {
         fileSize: 50 * 1024 * 1024, // 50MB limit per file

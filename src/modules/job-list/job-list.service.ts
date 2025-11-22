@@ -16,7 +16,6 @@ export class JobListService {
     jobId: string,
     userId: string
   ) {
-
     const jobData = await this.prisma.jobs.findUnique({
       where: { id: jobId },
       include: { areas: { include: { images: true } } }, // fetch areas and images
@@ -131,11 +130,50 @@ export class JobListService {
     const verticalGap = 30;  // Gap between two images on one page
     const titleGap = 5;      // Gap between an image and its title
 
+    // Helper function to find image file (handles old filenames with special characters)
+    const findImageFile = (filePath: string): string => {
+      const baseDir = path.resolve(process.cwd(), 'public', 'storage', 'inspection-images');
+      const originalPath = path.join(baseDir, filePath);
+      
+      // First, try the exact path from database
+      if (fs.existsSync(originalPath)) {
+        return originalPath;
+      }
+      
+      // If not found, try sanitized version (for files uploaded after sanitization fix)
+      const sanitizedPath = path.join(baseDir, filePath.replace(/[^a-zA-Z0-9._-]/g, '_'));
+      if (fs.existsSync(sanitizedPath)) {
+        return sanitizedPath;
+      }
+      
+      // If still not found, try to find by prefix (first 32 characters are random prefix)
+      const prefix = filePath.substring(0, 32);
+      try {
+        const files = fs.readdirSync(baseDir);
+        const matchingFile = files.find(f => f.startsWith(prefix));
+        if (matchingFile) {
+          return path.join(baseDir, matchingFile);
+        }
+      } catch (err) {
+        // Directory read failed, continue to throw error
+      }
+      
+      // File not found, throw detailed error
+      throw new HttpException(
+        `Image file not found: ${filePath}\n` +
+        `Searched at: ${originalPath}\n` +
+        `Also tried: ${sanitizedPath}\n` +
+        `Directory: ${baseDir}`,
+        HttpStatus.NOT_FOUND
+      );
+    };
+
     while (imageIndex < allImages.length) {
       let currentY = marginTop;
       const centerX = (doc.page.width - imageWidth) / 2;
   
-      const imgPath = path.join('public', 'storage', 'inspection-images', allImages[imageIndex].file_path);
+      // Find and use the image file
+      const imgPath = findImageFile(allImages[imageIndex].file_path);
       doc.image(imgPath, centerX, currentY, { width: imageWidth, height: imageHeight });
       doc.fontSize(10).text(allImages[imageIndex].title || '', centerX, currentY + imageHeight + titleGap, {
         align: 'center',
@@ -146,7 +184,7 @@ export class JobListService {
       currentY += imageHeight + titleGap + verticalGap;
   
       if (imageIndex < allImages.length) {
-        const imgPath2 = path.join('public', 'storage', 'inspection-images', allImages[imageIndex].file_path);
+        const imgPath2 = findImageFile(allImages[imageIndex].file_path);
         doc.image(imgPath2, centerX, currentY, { width: imageWidth, height: imageHeight });
         doc.fontSize(10).text(allImages[imageIndex].title || '', centerX, currentY + imageHeight + titleGap, {
           align: 'center',
