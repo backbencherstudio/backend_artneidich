@@ -20,6 +20,8 @@ import {
 import { AnyFilesInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage, memoryStorage } from 'multer';
 import { Request } from 'express';
+import * as path from 'path';
+import * as fs from 'fs';
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiConsumes } from '@nestjs/swagger';
 import { JobListService } from './job-list.service';
 import { CreateJobListDto } from './dto/create-job-list.dto';
@@ -44,7 +46,14 @@ export class JobListController {
   @UseInterceptors(
     AnyFilesInterceptor({
       storage: diskStorage({
-        destination: './public/storage/inspection-images',
+        destination: (req, file, cb) => {
+          // Use absolute path for AWS/production compatibility
+          const uploadDir = path.resolve(process.cwd(), 'public', 'storage', 'inspection-images');
+          if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+          }
+          cb(null, uploadDir);
+        },
         filename: (_, file, cb) => {
           // Generate random prefix
           const randomPrefix = Array(32).fill(null)

@@ -37,9 +37,12 @@ export class JobListService {
 
     if (allImages.length === 0) throw new HttpException('No images found', HttpStatus.NOT_FOUND);
 
-    // ✅ 4. Prepare PDF path
-    const pdfDir = './public/storage/inspection-pdf';
-    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
+    // ✅ 4. Prepare PDF path (use absolute path for AWS compatibility)
+    // On AWS, process.cwd() might be different, so we need to resolve from project root
+    const pdfDir = path.resolve(process.cwd(), 'public', 'storage', 'inspection-pdf');
+    if (!fs.existsSync(pdfDir)) {
+      fs.mkdirSync(pdfDir, { recursive: true });
+    }
     const pdfPath = path.join(pdfDir, `${jobId}.pdf`);
 
     const doc = new PDFDocument({
@@ -131,8 +134,20 @@ export class JobListService {
     const titleGap = 5;      // Gap between an image and its title
 
     // Helper function to find image file (handles old filenames with special characters)
+    // Uses absolute paths for AWS/production compatibility
     const findImageFile = (filePath: string): string => {
+      // Resolve base directory - works in both development and production (AWS)
       const baseDir = path.resolve(process.cwd(), 'public', 'storage', 'inspection-images');
+      
+      // Ensure directory exists
+      if (!fs.existsSync(baseDir)) {
+        throw new HttpException(
+          `Inspection images directory not found: ${baseDir}\n` +
+          `Current working directory: ${process.cwd()}`,
+          HttpStatus.INTERNAL_SERVER_ERROR
+        );
+      }
+      
       const originalPath = path.join(baseDir, filePath);
       
       // First, try the exact path from database
@@ -155,15 +170,18 @@ export class JobListService {
           return path.join(baseDir, matchingFile);
         }
       } catch (err) {
-        // Directory read failed, continue to throw error
+        // Directory read failed, log error for debugging
+        console.error(`Error reading directory ${baseDir}:`, err);
       }
       
-      // File not found, throw detailed error
+      // File not found, throw detailed error with debugging info
       throw new HttpException(
         `Image file not found: ${filePath}\n` +
         `Searched at: ${originalPath}\n` +
         `Also tried: ${sanitizedPath}\n` +
-        `Directory: ${baseDir}`,
+        `Base directory: ${baseDir}\n` +
+        `Working directory: ${process.cwd()}\n` +
+        `Directory exists: ${fs.existsSync(baseDir)}`,
         HttpStatus.NOT_FOUND
       );
     };
